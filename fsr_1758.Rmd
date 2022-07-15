@@ -1,0 +1,191 @@
+---
+title: "Gaia DR3, FSR 1758"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+Use the [Gaia DR3](https://www.cosmos.esa.int/web/gaia-users/archive/programmatic-access) with R ~ 2 arcmin.
+
+* Analyze the cluster stars and find the average distance in parsec, convert this to DM = m-M (use the formula). 
+* Find the [M/H] value, which should be similar to [Fe/H] in the table.  
+* Define a polygon search for each cluster and define a box search 1 deg x 1 deg around the cluster. 
+* Can you identify any cluster stars (by parallax, proper motion, and [M/H]) which are several cluster radii away from the cluster center?
+
+###### Variables used: `source_id`, `ra`, `dec`, `parallax`, `pmra`, `pmdec`, `bp_rp`, `mh_gspphot`, `radial_velocity`, `phot_g_mean_mag`, `pmra_error`,`pmdec_error`, `parallax_error`, `phot_g_mean_flux_over_error`, `phot_bp_mean_flux_over_error`, `phot_rp_mean_flux_over_error`.
+
+
+
+```{r}
+fsr_1758 <- read.csv("1657871539232O-result.csv")
+```
+
+```{r}
+library(tidyverse)
+library(readr)
+library(ggplot2)
+library(ggpubr)
+```
+
+#### Summary Statistics 
+
+```{r}
+summary(fsr_1758)
+```
+
+#### Model 1
+
+a. Use `lm()` to regress ra on dec and save the regression as `model_1`.
+
+```{r}
+model_1 <- lm(ra ~ dec, data = fsr_1758)
+```
+
+b. Regression results from the first model using `summary()`.
+
+An increase of one unit of dec is associated with an additional -0.59648 unit decrease in ra. This relationship is statistically significant at < 0.001.
+
+```{r}
+summary(model_1)
+```
+
+c. Plot results from `model_1`.
+
+```{r}
+ggplot(data = model_1, aes(x = dec, y = ra)) +
+  geom_point(alpha=0.5, size=2, color = 'orange') +
+  labs(y="ra", x="dec") +
+  stat_smooth()
+```
+
+#### Graph 
+
+```{r}
+fsr_1758 %>%
+  ggplot(aes(dec,ra)) +
+  geom_point(alpha=0.5, size=2, color = 'blue') +
+  labs(y="ra", x="dec")
+```
+
+#### Model 2: (Proper motion and error)
+
+a. Use `lm()` to regress pmra on pmdec and save the regression as `model_2` then pmra_error on pmdec_error and save as `pm_error`.
+
+```{r}
+model_2 <- lm(pmra ~ pmdec, data = fsr_1758)
+pm_error <- lm(pmra_error ~ pmdec_error, data = fsr_1758)
+```
+
+b. Regression results from the second and proper motion error model using `summary()`.
+
+`Model 2`: An increase of one unit of pmdec is associated with an additional 0.04283 unit increase in pmra. This relationship is statistically significant at < 0.1.
+
+`pm_error`: An increase of one unit of pmdec error is associated with an additional 1.619828 unit increase in pmra error. This relationship is statistically significant at < 0.001.
+
+
+```{r}
+summary(model_2)
+summary(pm_error)
+```
+
+c. Plot results from `model_2` and `pm_error`.
+
+```{r}
+ggplot(data = model_2, aes(x = pmdec, y = pmra)) +
+  geom_point(alpha=0.5, size=2, color = 'orange') +
+  labs(y="pmra", x="pmdec") +
+  stat_smooth()
+
+ggplot(data = pm_error, aes(x = pmdec_error, y = pmra_error)) +
+  geom_point(alpha=0.5, size=2, color = 'orange') +
+  labs(y="pmra", x="pmdec") +
+  stat_smooth()
+```
+
+#### Graph 
+
+```{r}
+fsr_1758 %>%
+  ggplot(aes(pmdec,pmra)) +
+  geom_point(alpha=0.5, size=2, color = 'blue') +
+  labs(y="pmra", x="pmdec") 
+```
+
+#### Model 3: (G-mean and bp/rp error)
+
+a. Use `lm()` to regress phot_g_mean_mag on bp_rp and save the regression as `model_3` then phot_g_mean_flux_over_error on phot_bp_mean_flux_over_error and phot_rp_mean_flux_over_error then save it as `phot_error`.
+
+```{r}
+model_3 <- lm(phot_g_mean_mag ~ bp_rp, data = fsr_1758)
+phot_error <- lm(phot_g_mean_flux_over_error ~ phot_bp_mean_flux_over_error + phot_rp_mean_flux_over_error, data = fsr_1758)
+```
+
+b. Regression results from the third model using `summary()`.
+
+An increase of one unit of bp_rp is associated with an additional -0.44855 unit decrease in phot_g_mean_mag. This relationship is statistically significant at < 0.001.
+
+An increase of one unit of bp/rp error is associated with an additional 2.4873 unit and 1.2577 increase in phot_g_mean_mag error. This relationship is statistically significant at < 0.001.
+
+
+```{r}
+summary(model_3)
+summary(phot_error)
+```
+
+c. Plot results from `model_3` and `phot_error`.
+
+```{r}
+ggplot(data = model_3, aes(x = bp_rp, y = phot_g_mean_mag)) +
+  geom_point(alpha=0.5, size=2, color = 'orange') +
+  labs(y="phot_g_mean_mag", x="bp_rp") +
+  stat_smooth()
+
+ggplot(data = phot_error, aes(x = phot_bp_mean_flux_over_error + phot_rp_mean_flux_over_error, y = phot_g_mean_flux_over_error)) +
+  geom_point(alpha=0.5, size=2, color = 'orange') +
+  labs(y="phot_g_mean_mag_error", x="bp_rp_error") +
+  stat_smooth()
+```
+
+#### Graph 
+
+```{r}
+fsr_1758 %>%
+  ggplot(aes(bp_rp,phot_g_mean_mag)) +
+  geom_point(alpha=0.5, size=2, color = 'blue') +
+  labs(y="phot_g_mean_mag", x="bp_rp")
+```
+
+#### Metallicity Over Hydrogen
+
+```{r}
+ggplot(fsr_1758, aes(mh_gspphot)) +
+  geom_histogram(bins = 30)
+```
+
+
+#### Radio Velocity
+
+```{r}
+ggplot(fsr_1758, aes(radial_velocity)) +
+  geom_histogram()
+```
+
+#### Polygon search for FSR 1758.
+
+(Switch over to Jupyter Lab.)
+
+```{r}
+ps_fsr_1758 <- fsr_1758 
+select(ps_ngc_6558, source_id, ra, dec, pmra, pmdec, parallax)
+```
+
+
+
+
+
+
+
+
+
