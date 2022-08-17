@@ -8,4 +8,4 @@
  * Ter 9
 
 
-[Gaia](https://gea.esac.esa.int/archive/)
+Gaia database: https://gea.esac.esa.int/archive/.
